@@ -1,5 +1,5 @@
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status,Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.db.session import get_db
@@ -9,6 +9,7 @@ from app.core.dependencies import get_current_user, oauth2_scheme
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
 from app.config import settings
 from datetime import datetime, timezone
+from app.main import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -39,11 +40,13 @@ async def create_user(request:RegisterRequest, db: AsyncSession = Depends(get_db
         access_token=access_token,
         refresh_token=refresh_token
     )
+
 @router.post("/login",status_code=status.HTTP_200_OK,response_model=TokenResponse)
-async def login(request:LoginRequest , db:AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == request.email))
+@limiter.limit("5/minute")
+async def login(request:Request,body:LoginRequest , db:AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalars().first()
-    if not user or not verify_password(request.password, user.hashed_password):
+    if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
@@ -60,6 +63,7 @@ async def login(request:LoginRequest , db:AsyncSession = Depends(get_db)):
         access_token=access_token,
         refresh_token=refresh_token
     )
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(request:RefreshRequest, db:AsyncSession=Depends(get_db)):
     payload = decode_token(request.refresh_token)
@@ -94,7 +98,9 @@ async def refresh_token(request:RefreshRequest, db:AsyncSession=Depends(get_db))
     )
 
 @router.post("/logout")
+@limiter.limit("5/minute")
 async def logout(
+    request:Request,
     current_user: User = Depends(get_current_user),
     token: str = Depends(oauth2_scheme)
 ):
