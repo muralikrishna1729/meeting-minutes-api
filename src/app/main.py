@@ -3,8 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routes.auth import router as auth_router
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from app.routes.minutes import router as minutes_router
+from app.routes.admin import router as admin_router
+from app.core.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 logging.basicConfig(
@@ -18,7 +20,6 @@ app = FastAPI(
     description="API for transcribing and summarizing meeting minutes"
 )
 
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -31,7 +32,8 @@ app.add_middleware(
     allow_headers = ["*"],
 )
 app.include_router(auth_router, prefix= "/api/v1")
-
+app.include_router(minutes_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
     
 @app.on_event("startup")

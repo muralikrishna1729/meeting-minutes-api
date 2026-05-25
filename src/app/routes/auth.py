@@ -9,7 +9,7 @@ from app.core.dependencies import get_current_user, oauth2_scheme
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
 from app.config import settings
 from datetime import datetime, timezone
-from app.main import limiter
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
