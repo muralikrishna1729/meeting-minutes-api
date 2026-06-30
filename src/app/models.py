@@ -2,8 +2,29 @@ import uuid
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import String, Text, Boolean, DateTime, JSON, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, CHAR 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type — uses PostgreSQL UUID, SQLite CHAR(36)"""
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            from sqlalchemy.dialects.postgresql import UUID
+            return dialect.type_descriptor(UUID())
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return uuid.UUID(value)
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models"""
@@ -11,7 +32,7 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = 'users'
-    id : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid =True), primary_key=True, default=uuid.uuid4)
+    id : Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
     email : Mapped[str] = mapped_column(String(255), unique=True, nullable=False,index = True)
     hashed_password : Mapped[str] = mapped_column(String(255), nullable=False)
     role : Mapped[str] = mapped_column(String(50), nullable=False, default='user')
@@ -21,8 +42,8 @@ class User(Base):
 
 class MeetingMinutes(Base):
     __tablename__ = 'meeting_minutes'
-    id : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index = True)
+    id : Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id : Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey('users.id'), nullable=False, index = True)
     original_text : Mapped[str] = mapped_column(Text, nullable=False)
     summary : Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     action_items : Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
@@ -34,8 +55,8 @@ class MeetingMinutes(Base):
 
 class Task(Base):
     __tablename__ = 'tasks'
-    id : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    meeting_id : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('meeting_minutes.id'), nullable=False, unique=True)
+    id : Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    meeting_id : Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey('meeting_minutes.id'), nullable=False, unique=True)
     status : Mapped[str] =  mapped_column(String(50), nullable=False, default='pending',index = True)
     result : Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     error : Mapped[Optional[str]] = mapped_column(Text, nullable=True)

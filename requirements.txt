@@ -1,3 +1,4 @@
+aiosqlite==0.22.1
 alembic==1.18.4
 amqp==5.3.1
 annotated-doc==0.0.4
@@ -11,6 +12,7 @@ black==26.5.1
 celery==5.6.3
 certifi==2026.5.20
 cffi==2.0.0
+charset-normalizer==3.4.7
 click==8.4.0
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
@@ -54,6 +56,7 @@ python-jose==3.5.0
 pytokens==0.4.1
 PyYAML==6.0.3
 redis==7.4.0
+requests==2.34.2
 rsa==4.9.1
 ruff==0.15.13
 six==1.17.0
@@ -64,6 +67,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2026.2
 tzlocal==5.3.1
+urllib3==2.7.0
 uvicorn==0.47.0
 uvloop==0.22.1
 vine==5.1.0
