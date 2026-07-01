@@ -8,20 +8,31 @@ from app.routes.admin import router as admin_router
 from app.core.limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from app.core.logging import setup_logging
+from app.middleware.correlation import CorrelationIdMiddleware
+from contextlib import asynccontextmanager
 
-logging.basicConfig(
-    level = logging.INFO,
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"    
-)
+
+setup_logging()
 logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    """Log application startup"""
+    logger.info(f"Application {settings.APP_NAME} started successfully")
+    logger.info(f"Environment: {settings.APP_ENV}")
+    logger.info(f"Summarizer type: {settings.SUMMARIZER_TYPE}")
+    yield
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="API for transcribing and summarizing meeting minutes"
+    description="API for transcribing and summarizing meeting minutes",
+    lifespan = lifespan
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(CorrelationIdMiddleware)
 
 
 app.add_middleware(
@@ -35,13 +46,9 @@ app.include_router(auth_router, prefix= "/api/v1")
 app.include_router(minutes_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
+
+
     
-@app.on_event("startup")
-async def startup_event():
-    """Log application startup"""
-    logger.info(f"Application {settings.APP_NAME} started successfully")
-    logger.info(f"Environment: {settings.APP_ENV}")
-    logger.info(f"Summarizer type: {settings.SUMMARIZER_TYPE}")
 
 
 @app.get("/health", tags= ["health"])
