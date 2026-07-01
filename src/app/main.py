@@ -5,6 +5,7 @@ from app.config import settings
 from app.routes.auth import router as auth_router
 from app.routes.minutes import router as minutes_router
 from app.routes.admin import router as admin_router
+from app.routes.health import router as health_router
 from app.core.limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -45,21 +46,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix= "/api/v1")
 app.include_router(minutes_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
-
-
-
-    
-
-
-@app.get("/health", tags= ["health"])
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "ok",
-        "app": settings.APP_NAME,
-        "environment": settings.APP_ENV
-    }
-
+app.include_router(health_router)
 @app.get("/",tags= ['root'])
 async def root():
     """Root endpoint"""
