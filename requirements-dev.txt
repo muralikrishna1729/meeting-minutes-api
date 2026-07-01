@@ -3,3 +3,4 @@ pytest-asyncio
 httpx
 ruff
 black
+mypy

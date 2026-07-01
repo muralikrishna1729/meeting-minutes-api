@@ -94,7 +94,7 @@ async def refresh_token(request:RefreshRequest, db:AsyncSession=Depends(get_db))
     refresh_token = create_refresh_token(str(user.id))
     return TokenResponse(
         access_token=access_token,
-        refresh_token=request.refresh_token  # ← same token back
+        refresh_token= refresh_token  
     )
 
 @router.post("/logout")
@@ -105,7 +105,6 @@ async def logout(
     token: str = Depends(oauth2_scheme)
 ):
     payload = decode_token(token)
-    user_id = payload["sub"]
     exp = payload["exp"]
     jti = payload["jti"]
     remaining_ttl = int(exp - datetime.now(tz=timezone.utc).timestamp())

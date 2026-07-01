@@ -38,7 +38,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
             return {"summary": summary, "action_items": [], "decisions": []}
         
         except Exception as e:
-            raise RuntimeError("HuggingFace API error: {str(e)}")
+            raise RuntimeError(f"HuggingFace API error {str(e)}")
 
 def get_summarizer() -> BaseSummarizer:
     if settings.SUMMARIZER_TYPE == "mock":
