@@ -1,0 +1,5 @@
+services:
+  db:
+    ports: !reset []   # ← overrides/empties the port mapping from the base file
+  redis:
+    ports: !reset []
