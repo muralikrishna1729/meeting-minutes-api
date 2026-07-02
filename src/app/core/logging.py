@@ -5,7 +5,7 @@ import datetime
 class JSONFormatter(logging.Formatter):
     def format(self,record:logging.LogRecord)->str:
         log_dict = {
-            "time": datetime.datetime.utcnow().isoformat(),
+            "time": datetime.datetime.now(datetime.UTC),
             "level": record.levelname,
             "message": record.getMessage(),
             "module": record.module,

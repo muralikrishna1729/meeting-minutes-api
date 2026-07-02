@@ -4,3 +4,5 @@ httpx
 ruff
 black
 mypy
+pytest-cov
+
