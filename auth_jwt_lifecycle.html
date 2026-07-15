@@ -1,0 +1,92 @@
+<h2 class="sr-only">Interactive diagram of the authentication flow — registration, JWT issuance, authenticated requests, token refresh, and logout via Redis blacklist</h2>
+<style>
+.dim{opacity:.32;transition:opacity .3s ease}
+@media (prefers-reduced-motion: no-preference){
+.flow{stroke-dasharray:6 4;animation:flow .8s linear infinite}
+}
+@keyframes flow{to{stroke-dashoffset:-20}}
+</style>
+<svg width="100%" viewBox="0 0 680 324" role="img">
+<title>Authentication flow diagram</title>
+<desc>Client, FastAPI, PostgreSQL, and Redis connected by arrows showing registration, JWT issuance, request authentication, refresh, and logout</desc>
+<defs>
+<marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<line id="b-client-fastapi" class="arr dim" x1="340" y1="84" x2="340" y2="124" stroke="var(--t)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line id="b-fastapi-postgres" class="arr dim" x1="280" y1="180" x2="200" y2="228" stroke="var(--t)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line id="b-fastapi-redis" class="arr dim" x1="400" y1="180" x2="500" y2="228" stroke="var(--t)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+<g id="b-client" class="c-gray dim">
+<rect x="250" y="40" width="180" height="44" rx="8" stroke-width="0.5"/>
+<text class="th" x="340" y="62" text-anchor="middle" dominant-baseline="central">Client</text>
+</g>
+
+<g id="b-fastapi" class="c-purple dim">
+<rect x="220" y="124" width="240" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="340" y="142" text-anchor="middle" dominant-baseline="central">FastAPI auth routes</text>
+<text class="ts" x="340" y="160" text-anchor="middle" dominant-baseline="central">bcrypt, JWT sign/verify</text>
+</g>
+
+<g id="b-postgres" class="c-teal dim">
+<rect x="90" y="228" width="220" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="200" y="246" text-anchor="middle" dominant-baseline="central">PostgreSQL</text>
+<text class="ts" x="200" y="264" text-anchor="middle" dominant-baseline="central">users table</text>
+</g>
+
+<g id="b-redis" class="c-teal dim">
+<rect x="410" y="228" width="180" height="56" rx="8" stroke-width="0.5"/>
+<text class="th" x="500" y="246" text-anchor="middle" dominant-baseline="central">Redis</text>
+<text class="ts" x="500" y="264" text-anchor="middle" dominant-baseline="central">JWT blacklist</text>
+</g>
+</svg>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin:1rem 0 0.5rem">
+<span id="b-step-count" style="font-size:13px;color:var(--text-muted)"></span>
+<div id="b-dots" style="display:flex;gap:6px">
+<span style="width:6px;height:6px;border-radius:50%"></span><span style="width:6px;height:6px;border-radius:50%"></span><span style="width:6px;height:6px;border-radius:50%"></span><span style="width:6px;height:6px;border-radius:50%"></span><span style="width:6px;height:6px;border-radius:50%"></span><span style="width:6px;height:6px;border-radius:50%"></span>
+</div>
+</div>
+
+<p id="b-step-title" style="font-size:15px;font-weight:500;color:var(--text-primary);margin:0 0 4px"></p>
+<p id="b-step-desc" style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0 0 1rem"></p>
+
+<div style="display:flex;gap:8px">
+<button id="b-prev" onclick="bNav(-1)" style="flex:1">Back</button>
+<button id="b-next" onclick="bNav(1)" style="flex:1"><span id="b-next-label"></span></button>
+</div>
+
+<script>
+const bSteps=[
+{title:"Client registers",desc:"POST /auth/register — FastAPI hashes the password with bcrypt and creates the user row in PostgreSQL.",nodes:["b-client","b-fastapi","b-postgres"],arrows:["b-client-fastapi","b-fastapi-postgres"]},
+{title:"FastAPI issues tokens",desc:"A short-lived signed access token and a longer-lived refresh token are returned to the client.",nodes:["b-client","b-fastapi"],arrows:["b-client-fastapi"]},
+{title:"Authenticated request",desc:"The client sends the access token in the Authorization header on every protected route.",nodes:["b-client","b-fastapi"],arrows:["b-client-fastapi"]},
+{title:"Blacklist check",desc:"FastAPI decodes the token and checks Redis for its jti before trusting it — rejected tokens never reach the route handler.",nodes:["b-fastapi","b-redis"],arrows:["b-fastapi-redis"]},
+{title:"Refresh flow",desc:"When the access token expires, the client exchanges the refresh token for a new access token without logging in again.",nodes:["b-client","b-fastapi"],arrows:["b-client-fastapi"]},
+{title:"Logout blacklists the token",desc:"FastAPI computes the token's remaining lifetime and writes its jti to Redis with that same expiry. The token is rejected on every request from this point on.",nodes:["b-fastapi","b-redis"],arrows:["b-fastapi-redis"]}
+];
+const bNodeIds=["b-client","b-fastapi","b-postgres","b-redis"];
+const bArrowIds=["b-client-fastapi","b-fastapi-postgres","b-fastapi-redis"];
+let bIdx=0;
+function bRender(){
+const step=bSteps[bIdx];
+bNodeIds.forEach(id=>{document.getElementById(id).classList.toggle("dim",!step.nodes.includes(id))});
+bArrowIds.forEach(id=>{
+const el=document.getElementById(id);
+const active=step.arrows.includes(id);
+el.classList.toggle("dim",!active);
+el.classList.toggle("flow",active);
+});
+document.getElementById("b-step-title").textContent=step.title;
+document.getElementById("b-step-desc").textContent=step.desc;
+document.getElementById("b-step-count").textContent="Step "+(bIdx+1)+" of "+bSteps.length;
+document.getElementById("b-dots").querySelectorAll("span").forEach((d,i)=>{d.style.background=i===bIdx?"var(--text-accent)":"var(--border-strong)"});
+document.getElementById("b-prev").disabled=bIdx===0;
+document.getElementById("b-next-label").textContent=bIdx===bSteps.length-1?"Restart":"Next";
+}
+function bNav(dir){
+if(dir<0){bIdx=Math.max(0,bIdx-1)}else{bIdx=bIdx===bSteps.length-1?0:bIdx+1}
+bRender();
+}
+bRender();
+</script>

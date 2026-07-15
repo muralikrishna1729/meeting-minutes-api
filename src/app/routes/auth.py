@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.models import User
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.dependencies import get_current_user, oauth2_scheme
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, UserResponse
 from app.config import settings
 from datetime import datetime, timezone
 from app.core.limiter import limiter
@@ -96,6 +96,10 @@ async def refresh_token(request:RefreshRequest, db:AsyncSession=Depends(get_db))
         access_token=access_token,
         refresh_token= refresh_token  
     )
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user=Depends(get_current_user)):
+    return current_user
 
 @router.post("/logout")
 @limiter.limit("5/minute")
