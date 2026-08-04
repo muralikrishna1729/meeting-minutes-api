@@ -8,6 +8,7 @@ from app.models import MeetingMinutes
 from app.core.dependencies import get_current_admin
 from app.config import settings
 from sqlalchemy import or_
+from app.services.summarizer import BaseSummarizer
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 class SwitchModelRequest(BaseModel):
@@ -46,10 +47,11 @@ async def get_admin_stats(db :AsyncSession = Depends(get_db),current_user = Depe
 
 @router.post("/model/switch")
 async def switch_model(body:SwitchModelRequest,db :AsyncSession = Depends(get_db),current_user = Depends(get_current_admin)):
-    if body.summarizer_type not in ["mock", "huggingface"]:
+    valid_types = {cls.__name__.removesuffix("Summarizer").lower() for cls in BaseSummarizer.__subclasses__()}
+    if body.summarizer_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid token type"
+            detail="Invalid summarizer type"
         )
     settings.SUMMARIZER_TYPE = body.summarizer_type
     return {"message": f"Summarizer switched to {body.summarizer_type}"}

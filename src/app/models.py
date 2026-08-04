@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import String, Text, Boolean, DateTime, JSON, ForeignKey, func
 from sqlalchemy.types import TypeDecorator, CHAR 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from app.core.statuses import MeetingStatus, TaskStatus
 
 class GUID(TypeDecorator):
     """Platform-independent GUID type — uses PostgreSQL UUID, SQLite CHAR(36)"""
@@ -50,7 +51,7 @@ class MeetingMinutes(Base):
     summary : Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     action_items : Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     decisions : Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
-    status : Mapped[str] = mapped_column(String(50), nullable=False, default='pending',index = True)
+    status : Mapped[str] = mapped_column(String(50), nullable=False, default=MeetingStatus.PENDING.value,index = True)
     created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)
     updated_at : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -59,7 +60,7 @@ class Task(Base):
     __tablename__ = 'tasks'
     id : Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
     meeting_id : Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey('meeting_minutes.id'), nullable=False, unique=True)
-    status : Mapped[str] =  mapped_column(String(50), nullable=False, default='pending',index = True)
+    status : Mapped[str] =  mapped_column(String(50), nullable=False, default=TaskStatus.PENDING.value,index = True)
     result : Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     error : Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)

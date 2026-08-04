@@ -9,6 +9,7 @@ from app.models import MeetingMinutes, Task
 from app.core.dependencies import get_current_user
 from app.schemas.minutes import UploadTextRequest, MinutesResponse, StatusResponse, MinutesListResponse
 from app.tasks.summarize import summarize_meeting_task
+from app.core.statuses import MeetingStatus, TaskStatus
 
 router = APIRouter(prefix="/minutes", tags=["minutes"])
 
@@ -17,7 +18,7 @@ async def upload_text(body: UploadTextRequest, db: AsyncSession = Depends(get_db
     meeting = MeetingMinutes(
         user_id=current_user.id,
         original_text=body.original_text,
-        status="pending",
+        status=MeetingStatus.PENDING.value,
     )
     db.add(meeting)
     await db.commit()
@@ -28,14 +29,14 @@ async def upload_text(body: UploadTextRequest, db: AsyncSession = Depends(get_db
     task = Task(
         id = uuid.uuid4(),
         meeting_id=meeting.id,
-        status="PENDING",
+        status=TaskStatus.PENDING.value,
     )
     db.add(task)
     await db.commit()
     return{
         "meeting_id": meeting.id,
         "task_id": task.id,
-        "status": "pending"
+        "status": TaskStatus.PENDING.value
     }
 
 @router.get("/{meeting_id}", response_model=MinutesResponse)
@@ -90,6 +91,7 @@ async def getMinutesList(page:int=1, page_size:int=10,db:AsyncSession=Depends(ge
         select(MeetingMinutes)
         .where(MeetingMinutes.user_id == current_user.id)
         .where(MeetingMinutes.deleted_at.is_(None))
+        .order_by(MeetingMinutes.created_at.desc())
         .offset(offset).limit(page_size)
     )
     minutes = minutes_result.scalars().all()

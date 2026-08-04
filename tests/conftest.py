@@ -24,8 +24,10 @@ async def setup_db():
 
 @pytest_asyncio.fixture(autouse=True)
 async def mock_redis():
-    with patch("app.routes.auth.redis") as mock:
+    with patch("app.routes.auth.redis") as mock, \
+        patch("app.core.dependencies.redis_client") as mock_cache:
         mock.set = AsyncMock(return_value=True)
+        mock_cache.get = AsyncMock(return_value=None)
         yield mock
 
 @pytest_asyncio.fixture(autouse=True)

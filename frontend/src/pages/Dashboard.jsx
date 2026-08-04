@@ -4,34 +4,36 @@ import api from "../api/axios";
 import MeetingCard from "../components/MeetingCard";
 import Loader from "../components/Loader";
 
+const PAGE_SIZE = 10;
+
 export default function Dashboard() {
   const [meetings, setMeetings] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchMeetings(searchTerm);
-    }, 400);
+    fetchMeetings(page);
+  }, [page]);
 
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchMeetings = async (search) => {
+  const fetchMeetings = async (pageNum) => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get("/minutes", {
-        params: search ? { search } : {},
+      const res = await api.get("/minutes/", {
+        params: { page: pageNum, page_size: PAGE_SIZE },
       });
-      setMeetings(res.data);
+      setMeetings(res.data.items);
+      setTotal(res.data.total);
     } catch (err) {
       setError("Failed to load meetings. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -44,14 +46,6 @@ export default function Dashboard() {
           + Upload Transcript
         </Link>
       </div>
-
-      <input
-        type="text"
-        placeholder="Search meetings..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full border rounded px-3 py-2 mb-6"
-      />
 
       {loading && <Loader />}
 
@@ -66,11 +60,33 @@ export default function Dashboard() {
       )}
 
       {!loading && !error && meetings.length > 0 && (
-        <div className="space-y-3">
-          {meetings.map((meeting) => (
-            <MeetingCard key={meeting.id} meeting={meeting} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 mb-6 grid-cols-1 sm:grid-cols-2">
+            {meetings.map((meeting) => (
+              <MeetingCard key={meeting.id} meeting={meeting} />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page <= 1}
+              className="px-3 py-1.5 border rounded disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 border rounded disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS : int = 7  # 7 days
 
     HF_API_TOKEN: str = ""  # optional, empty default
+    GROQ_API_KEY: str = ""  # optional, empty default
+
 
     model_config = SettingsConfigDict(env_file=".env", extra = "ignore")
 
