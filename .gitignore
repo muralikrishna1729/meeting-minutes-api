@@ -22,6 +22,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+test.db
 
 # Docker
 *.log
@@ -31,3 +32,8 @@ htmlcov/
 Thumbs.db
 
 # Alembic
+*.db
+
+# Claude / working notes
+CLAUDE.md
+docs/PROJECT_REVIEW.md
