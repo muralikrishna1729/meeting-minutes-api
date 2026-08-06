@@ -1,42 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import func
 from pydantic import BaseModel
-from app.db.session import get_db
-from app.models import MeetingMinutes
 from app.core.dependencies import get_current_admin
 from app.config import settings
-from sqlalchemy import or_
 from app.services.summarizer import BaseSummarizer
+from app.db.mongo import db as mongo_db
+from app.constants import MEETINGS_COLLECTION
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 class SwitchModelRequest(BaseModel):
     summarizer_type:str
 
 @router.get("/stats")
-async def get_admin_stats(db :AsyncSession = Depends(get_db),current_user = Depends(get_current_admin)):
-    result = await db.execute(
-            select(func.count()).select_from(MeetingMinutes)
-            .where(MeetingMinutes.deleted_at.is_(None))
-
-        )
-    total_meetings = result.scalar()
-    result = await db.execute(
-            select(func.count()).select_from(MeetingMinutes)
-            .where(MeetingMinutes.status == "completed")
-        )
-    completed = result.scalar()
-    result = await db.execute(
-            select(func.count()).select_from(MeetingMinutes)
-            .where(MeetingMinutes.status == "failed")
-        )
-    failed = result.scalar()
-    result = await db.execute(
-            select(func.count()).select_from(MeetingMinutes)
-            .where(or_(MeetingMinutes.status == "pending",MeetingMinutes.status == "processing"))
-        )
-    pending = result.scalar()
+async def get_admin_stats(current_user = Depends(get_current_admin)):
+    result = await mongo_db[MEETINGS_COLLECTION].count_documents({"deleted_at": None})
+    total_meetings = result
+    result = await mongo_db[MEETINGS_COLLECTION].count_documents({"status": "completed"})
+    completed = result
+    result = await mongo_db[MEETINGS_COLLECTION].count_documents({"status": "failed"})
+    failed = result
+    result = await mongo_db[MEETINGS_COLLECTION].count_documents({"status": {"$in": ["pending", "processing"]}})
+    pending = result
     return {
         "current_summarizer":settings.SUMMARIZER_TYPE,
         "total":total_meetings,
@@ -46,7 +29,7 @@ async def get_admin_stats(db :AsyncSession = Depends(get_db),current_user = Depe
     }
 
 @router.post("/model/switch")
-async def switch_model(body:SwitchModelRequest,db :AsyncSession = Depends(get_db),current_user = Depends(get_current_admin)):
+async def switch_model(body:SwitchModelRequest,current_user = Depends(get_current_admin)):
     valid_types = {cls.__name__.removesuffix("Summarizer").lower() for cls in BaseSummarizer.__subclasses__()}
     if body.summarizer_type not in valid_types:
         raise HTTPException(

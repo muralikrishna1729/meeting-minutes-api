@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.logging import setup_logging
 from app.middleware.correlation import CorrelationIdMiddleware
 from contextlib import asynccontextmanager
-
+from app.db.mongo_indexes import ensure_indexes
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ async def lifespan(app:FastAPI):
     logger.info(f"Application {settings.APP_NAME} started successfully")
     logger.info(f"Environment: {settings.APP_ENV}")
     logger.info(f"Summarizer type: {settings.SUMMARIZER_TYPE}")
+    await ensure_indexes()
     yield
 app = FastAPI(
     title=settings.APP_NAME,

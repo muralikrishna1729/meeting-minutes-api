@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str 
     DATABASE_URL: str 
     REDIS_URL: str =  "redis://localhost:6379/0"
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DB: str = "meeting_minutes_db"
     CELERY_BROKER_URL : str 
     CELERY_RESULT_BACKEND : str 
     SUMMARIZER_TYPE: str = "mock"

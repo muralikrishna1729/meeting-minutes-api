@@ -1,40 +1,44 @@
+import uuid
 from app.services.celery_app import celery_app
 from app.services.summarizer import get_summarizer
-from app.models import MeetingMinutes, Task
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from app.config import settings
 from app.core.statuses import MeetingStatus, TaskStatus
+import pymongo
 
-sync_engine = create_engine(settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2"))
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+sync_mongo = pymongo.MongoClient(settings.MONGODB_URL)
+db = sync_mongo[settings.MONGODB_DB]
+meetings = db["meetings"]
+tasks = db["tasks"]
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def summarize_meeting_task(self, meeting_id: str, original_text: str):
-    with SessionLocal() as db:
-        meeting = db.query(MeetingMinutes).filter(MeetingMinutes.id == meeting_id).first()
-        if not meeting:
-            return
-        try:
-            meeting.status = MeetingStatus.PROCESSING.value
-            db.commit()
-            task = db.query(Task).filter(Task.meeting_id == meeting_id).first()
-            result = get_summarizer().generate( original_text)
-            if not result:
-                raise ValueError("Summarization failed")
-            meeting.summary = result["summary"]
-            meeting.action_items = result["action_items"]
-            meeting.decisions = result["decisions"]            
-            meeting.status = MeetingStatus.COMPLETED.value
-            if task:
-                task.status = TaskStatus.COMPLETED.value
-                task.result = result 
-            db.commit() 
-
-        except Exception as exc:
-            meeting.status = MeetingStatus.FAILED.value
-            if task:
-                task.status = TaskStatus.FAILED.value
-                task.error = str(exc)
-            db.commit()
-            raise self.retry(exc=exc) 
+    meeting = meetings.find_one({"_id": meeting_id})
+    if not meeting:
+        return
+    try:
+        task = tasks.find_one({"meeting_id": meeting["_id"]})
+        meetings.update_one({"_id": meeting["_id"]},
+                            {"$set": {"status": MeetingStatus.PROCESSING.value}})
+        result = get_summarizer().generate(original_text)
+        if not result:
+            raise ValueError("Summarization failed")
+        meetings.update_one({"_id": meeting["_id"]}, {"$set": {
+            "summary": result["summary"],
+            "action_items": result["action_items"],
+            "decisions": result["decisions"],
+            "status": MeetingStatus.COMPLETED.value,
+        }})
+        if task:
+            tasks.update_one({"_id": task["_id"]}, {"$set": {
+                "status": TaskStatus.COMPLETED.value,
+                "result": result,
+            }})
+    except Exception as exc:
+        meetings.update_one({"_id": meeting["_id"]},
+                            {"$set": {"status": MeetingStatus.FAILED.value}})
+        if "task" in locals() and task:
+            tasks.update_one({"_id": task["_id"]}, {"$set": {
+                "status": TaskStatus.FAILED.value,
+                "error": str(exc),
+            }})
+        raise self.retry(exc=exc)

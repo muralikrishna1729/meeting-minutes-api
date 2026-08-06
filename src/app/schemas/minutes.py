@@ -8,7 +8,7 @@ class UploadTextRequest(BaseModel):
     original_text :str = Field(..., description="The original text to be uploaded.", min_length=10,max_length=50000)
 
 class MinutesResponse(BaseModel):
-    id: UUID = Field(..., description="Unique identifier for the minutes.")
+    id: UUID = Field(..., alias="_id", serialization_alias="id", description="Unique identifier for the minutes.")
     user_id: UUID = Field(..., description="Unique identifier for the user who uploaded the text.")
     status: str = Field(..., description="The status of the minutes (e.g., 'processing', 'completed', 'failed').")
     original_text: str = Field(..., description="The original text that was uploaded.")
@@ -17,8 +17,7 @@ class MinutesResponse(BaseModel):
     decisions: Optional[list] = Field(None, description="Decisions extracted from the original text.")
     created_at: datetime = Field(..., description="The timestamp when the minutes were created.")
     updated_at: datetime = Field(..., description="The timestamp when the minutes were last updated.")
-
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(populate_by_name=True)
 
 class StatusResponse(BaseModel):
     meeting_id :UUID 

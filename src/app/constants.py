@@ -1,0 +1,2 @@
+MEETINGS_COLLECTION = "meetings"
+TASKS_COLLECTION = "tasks"

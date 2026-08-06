@@ -8,6 +8,7 @@ const PAGE_SIZE = 10;
 
 export default function Dashboard() {
   const [meetings, setMeetings] = useState([]);
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -15,14 +16,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchMeetings(page);
-  }, [page]);
+  }, [page, query]);
 
   const fetchMeetings = async (pageNum) => {
     setLoading(true);
     setError("");
     try {
       const res = await api.get("/minutes/", {
-        params: { page: pageNum, page_size: PAGE_SIZE },
+        params: { page: pageNum, page_size: PAGE_SIZE, q: query || undefined },
       });
       setMeetings(res.data.items);
       setTotal(res.data.total);
@@ -37,6 +38,16 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
+    <input
+  type="text"
+  value={query}
+  onChange={(e) => {
+    setQuery(e.target.value);
+    setPage(1);           // reset to first page on new search
+  }}
+  placeholder="Search meetings..."
+  className="w-full max-w-xs px-3 py-2 border rounded mb-4"
+/>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Your Meetings</h1>
         <Link
