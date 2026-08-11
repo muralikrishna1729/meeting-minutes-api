@@ -135,6 +135,3 @@ tests/                 pytest: auth (SQLite) + minutes (real Mongo)
 - All six original backend bugs were fixed and documented in `docs/PROJECT_REVIEW.md` (refresh-token auth, status enums, admin switch, pagination order, JWT blacklist, HF timeout).
 - The frontend stores tokens in `localStorage` (session-only for a portfolio demo).
 
-## 📄 License
-
-MIT
